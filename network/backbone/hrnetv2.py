@@ -321,7 +321,7 @@ if __name__ == '__main__':
         print("No backbone checkpoint found for HRNetv2, please set pretrained=False when calling model")
 
     # Models
-    model = hrnetv2_32(pretrained=True)
+    model = hrnetv2_32(pretrained=False)
     #model = hrnetv2_48(pretrained=False)
 
     if torch.cuda.is_available():
