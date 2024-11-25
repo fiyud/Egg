@@ -78,6 +78,8 @@ def get_argparser():
     parser.add_argument("--vis_num_samples", type=int, default=8,
                         help='number of samples for visualization (default: 8)')
     
+    parser.add_argument("--optim", type=str, default='SGD', help='type of optimizer')
+
     parser.add_argument("--type", type=str, default='MobileNetV4ConvMedium', help='type of MobileNetV4')
 
     # MobileNetV4ConvSmall  MobileNetV4ConvMedium  MobileNetV4ConvLarge
@@ -201,18 +203,29 @@ def main():
     print("Dataset: %s, Train set: %d, Val set: %d" %
           (opts.dataset, len(train_dst), len(val_dst)))
 
-    model =network.modeling._load_mobilev4_backbone_model(mobilev4_type = opts.type, num_classes=opts.num_classes)
+    model = network.modeling._load_mobilev4_backbone_model(mobilev4_type = opts.type, num_classes=opts.num_classes)
     
     utils.set_bn_momentum(model.backbone, momentum=0.01)
 
     # Set up metrics
     metrics = StreamSegMetrics(opts.num_classes)
 
-    # Set up optimizer
-    optimizer = torch.optim.SGD(params=[
+    # Set up optimizer opts
+    if opts.startswith("sgd"):
+        optimizer = torch.optim.SGD(params=[
         {'params': model.backbone.parameters(), 'lr': 0.1 * opts.lr},
         {'params': model.classifier.parameters(), 'lr': opts.lr},
     ], lr=opts.lr, momentum=0.9, weight_decay=opts.weight_decay)
+    elif opts.startswith("adamw"):
+        optimizer = torch.optim.adamw(params=[
+            {'params': model.backbone.parameters(), 'lr': 0.1 * opts.lr},
+            {'params': model.classifier.parameters(), 'lr': opts.lr},
+        ], lr=opts.lr, weight_decay=opts.weight_decay)
+    else:
+        raise RuntimeError(f"Invalid optimizer, only SGD and AdamW are supported.")
+
+
+    
     # optimizer = torch.optim.SGD(params=model.parameters(), lr=opts.lr, momentum=0.9, weight_decay=opts.weight_decay)
     # torch.optim.lr_scheduler.StepLR(optimizer, step_size=opts.lr_decay_step, gamma=opts.lr_decay_factor)
     if opts.lr_policy == 'poly':
